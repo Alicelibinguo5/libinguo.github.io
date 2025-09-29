@@ -20,3 +20,23 @@ class ContactMessage(BaseModel):
 	message: str
 
 
+class BlogPost(BaseModel):
+    slug: str
+    title: str
+    summary: str
+    content: str
+    created_at: str
+
+
+class BlogPostCreate(BaseModel):
+    title: str
+    summary: str
+    content: str
+
+
+class BlogPostUpdate(BaseModel):
+    title: Optional[str] = None
+    summary: Optional[str] = None
+    content: Optional[str] = None
+
+

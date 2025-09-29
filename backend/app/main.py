@@ -10,6 +10,7 @@ from .models import ContactMessage, Project
 from .routers.projects import router as projects_router
 from .routers.contact import router as contact_router
 from .routers.github import router as github_router
+from .routers.blog import router as blog_router
 
 
 def create_app() -> FastAPI:
@@ -28,6 +29,7 @@ def create_app() -> FastAPI:
 	app.include_router(projects_router, prefix="/api/projects", tags=["projects"])
 	app.include_router(contact_router, prefix="/api/contact", tags=["contact"])
 	app.include_router(github_router, prefix="/api/github", tags=["github"])
+	app.include_router(blog_router, prefix="/api/blog", tags=["blog"])
 
 	# Health check
 	@app.get("/api/health")

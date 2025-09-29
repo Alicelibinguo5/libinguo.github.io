@@ -1,1 +1,1 @@
-{"root":["./src/env.d.ts","./src/main.tsx","./src/routes/about.tsx","./src/routes/contact.tsx","./src/routes/home.tsx","./src/routes/projects.tsx","./src/routes/rootlayout.tsx"],"version":"5.9.2"}
+{"root":["./src/env.d.ts","./src/main.tsx","./src/routes/about.tsx","./src/routes/blog.tsx","./src/routes/blogpost.tsx","./src/routes/contact.tsx","./src/routes/home.tsx","./src/routes/newblogpost.tsx","./src/routes/projectdojlegalresearcheragent.tsx","./src/routes/projects.tsx","./src/routes/rootlayout.tsx","./src/routes/blogdata.ts"],"version":"5.9.2"}

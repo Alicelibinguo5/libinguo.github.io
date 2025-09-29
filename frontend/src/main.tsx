@@ -7,6 +7,10 @@ import Home from './routes/Home'
 import Projects from './routes/Projects'
 import About from './routes/About'
 import Contact from './routes/Contact'
+import ProjectDojLegalResearcherAgent from './routes/ProjectDojLegalResearcherAgent'
+import Blog from './routes/Blog'
+import BlogPost from './routes/BlogPost'
+import NewBlogPost from './routes/NewBlogPost'
 
 const router = createBrowserRouter([
 	{
@@ -15,6 +19,10 @@ const router = createBrowserRouter([
 		children: [
 			{ index: true, element: <Home /> },
 			{ path: 'projects', element: <Projects /> },
+			{ path: 'projects/doj-legal-researcher-agent', element: <ProjectDojLegalResearcherAgent /> },
+			{ path: 'blog', element: <Blog /> },
+			{ path: 'blog/:slug', element: <BlogPost /> },
+			{ path: 'blog/new', element: <NewBlogPost /> },
 			{ path: 'about', element: <About /> },
 			{ path: 'contact', element: <Contact /> },
 		],

@@ -5,10 +5,11 @@ export default function RootLayout() {
 		<div className="min-h-screen flex flex-col">
 			<header className="border-b border-zinc-200 dark:border-zinc-800">
 				<div className="container flex items-center justify-between py-4">
-					<div className="text-lg font-semibold">Alice Guo</div>
+					<div className="text-lg font-semibold">Libin Guo</div>
 					<nav className="flex items-center gap-4">
 						<NavLink to="/" className="nav-link">Home</NavLink>
 						<NavLink to="/projects" className="nav-link">Projects</NavLink>
+						<NavLink to="/blog" className="nav-link">Blog</NavLink>
 						<NavLink to="/about" className="nav-link">About</NavLink>
 						<NavLink to="/contact" className="nav-link">Contact</NavLink>
 					</nav>
@@ -18,7 +19,7 @@ export default function RootLayout() {
 				<Outlet />
 			</main>
 			<footer className="border-t border-zinc-200 dark:border-zinc-800">
-				<div className="container py-6 text-sm text-zinc-500">© {new Date().getFullYear()} Alice Guo</div>
+				<div className="container py-6 text-sm text-zinc-500">© {new Date().getFullYear()} Libin Guo</div>
 			</footer>
 		</div>
 	)
