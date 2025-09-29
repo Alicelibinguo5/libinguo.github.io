@@ -11,6 +11,7 @@ import ProjectDojLegalResearcherAgent from './routes/ProjectDojLegalResearcherAg
 import Blog from './routes/Blog'
 import BlogPost from './routes/BlogPost'
 import NewBlogPost from './routes/NewBlogPost'
+import EditBlogPost from './routes/EditBlogPost'
 
 const router = createBrowserRouter([
 	{
@@ -23,6 +24,7 @@ const router = createBrowserRouter([
 			{ path: 'blog', element: <Blog /> },
 			{ path: 'blog/:slug', element: <BlogPost /> },
 			{ path: 'blog/new', element: <NewBlogPost /> },
+			{ path: 'blog/:slug/edit', element: <EditBlogPost /> },
 			{ path: 'about', element: <About /> },
 			{ path: 'contact', element: <Contact /> },
 		],

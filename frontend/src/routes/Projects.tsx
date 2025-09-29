@@ -134,11 +134,9 @@ export default function Projects() {
 					return (
 					<article key={r.id} className="card">
 							<div className="flex items-center gap-2">
-								<h2 className="font-semibold text-lg">{isFeatured ? (
-									<a className="nav-link" href={r.html_url} target="_blank" rel="noreferrer">{r.name}</a>
-								) : (
-									<>{r.name}</>
-								)}</h2>
+								<h2 className="font-semibold text-lg">
+									<a className="hover:underline cursor-pointer" href={r.html_url} target="_blank" rel="noreferrer noopener" aria-label={`Open ${r.name} on GitHub`}>{r.name}</a>
+								</h2>
 								{isFeatured && (
 									<span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">Featured</span>
 								)}

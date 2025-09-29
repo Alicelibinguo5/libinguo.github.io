@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import type { BlogPost } from './blogData'
 
 export default function BlogPost() {
@@ -38,6 +38,9 @@ export default function BlogPost() {
 			<p className="text-xs text-zinc-500">{new Date(post.created_at).toLocaleDateString()}</p>
 			<div className="prose dark:prose-invert max-w-none whitespace-pre-wrap">
 				{post.content}
+			</div>
+			<div className="mt-4">
+				<Link className="nav-link" to={`/blog/${post.slug}/edit`}>Edit</Link>
 			</div>
 		</article>
 	)
