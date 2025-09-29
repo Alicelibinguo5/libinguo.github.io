@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import List
@@ -12,7 +13,7 @@ from ..models import BlogPost, BlogPostCreate, BlogPostUpdate
 
 router = APIRouter()
 
-DATA_DIR = Path(__file__).resolve().parents[2] / "data"
+DATA_DIR = Path(os.getenv("BLOG_DATA_DIR", str(Path(__file__).resolve().parents[2] / "data")))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 POSTS_FILE = DATA_DIR / "blog_posts.json"
 
