@@ -129,6 +129,8 @@ export default function Projects() {
 					const isFeatured = r.full_name === FEATURED_FULL_NAME
 					const isSecond = r.full_name === SECOND_FULL_NAME
 					const isThird = r.full_name === THIRD_FULL_NAME
+					const baseTags = (r.topics && r.topics.length ? r.topics : (r.language ? [r.language] : []))
+					const tags = isFeatured ? Array.from(new Set([...baseTags, 'multi-agent', 'FastAPI'])) : baseTags
 					return (
 					<article key={r.id} className="card">
 							<div className="flex items-center gap-2">
@@ -155,17 +157,13 @@ export default function Projects() {
 									<a className="nav-link" href="/projects/doj-legal-researcher-agent">Read Case Study</a>
 								)}
 							</div>
-							{(() => {
-								const baseTags = (r.topics && r.topics.length ? r.topics : (r.language ? [r.language] : []))
-								const tags = isFeatured ? Array.from(new Set([...baseTags, 'multi-agent', 'FastAPI'])) : baseTags
-								return tags.length ? (
-									<div className="mt-3 flex flex-wrap gap-2 text-xs">
-										{tags.slice(0, 6).map(t => (
-											<span key={t} className="px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800">{t}</span>
-										))}
-									</div>
-								) : null
-							)()}
+							{tags.length > 0 && (
+								<div className="mt-3 flex flex-wrap gap-2 text-xs">
+									{tags.slice(0, 6).map(t => (
+										<span key={t} className="px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800">{t}</span>
+									))}
+								</div>
+							)}
 					</article>
 					)
 				})}
