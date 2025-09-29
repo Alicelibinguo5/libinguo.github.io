@@ -37,12 +37,21 @@ def create_app() -> FastAPI:
 		return {"status": "ok"}
 
 	# Static file serving for production (frontend build)
-	# This will serve the React app from frontend/dist if present
+	# Serve built assets under /assets and fallback all routes to index.html
 	frontend_dist = (Path(__file__).resolve().parents[2] / "frontend" / "dist").resolve()
 	if frontend_dist.exists():
-		app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="static")
+		assets_dir = frontend_dist / "assets"
+		if assets_dir.exists():
+			app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
-		#index.html fallback for SPA routing
+		@app.get("/")
+		def index_root():
+			index_file = frontend_dist / "index.html"
+			if not index_file.exists():
+				raise HTTPException(status_code=404, detail="index.html not found")
+			return FileResponse(str(index_file))
+
+		# SPA fallback for client-side routes like /contact, /projects, etc.
 		@app.get("/{full_path:path}")
 		def spa_fallback(full_path: str):  # type: ignore[unused-argument]
 			index_file = frontend_dist / "index.html"

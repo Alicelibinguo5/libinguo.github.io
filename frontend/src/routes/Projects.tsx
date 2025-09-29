@@ -52,7 +52,8 @@ export default function Projects() {
 	const THIRD_FULL_NAME = 'Alicelibinguo/Analyzing-Website-Landing-Page-A-B-Test-Results-'
 	const THIRD_GOAL = 'A/B testing analysis to assess if a new landing page increases conversion, using pandas, matplotlib, and regression.'
 
-	let displayRepos: GithubRepo[] = [...repos]
+	// Only show repos that have at least one GitHub star
+	let displayRepos: GithubRepo[] = repos.filter(r => (r.stargazers_count ?? 0) > 0)
 	const featuredIndex = displayRepos.findIndex(r => r.full_name === FEATURED_FULL_NAME)
 	if (featuredIndex >= 0) {
 		const [featured] = displayRepos.splice(featuredIndex, 1)
@@ -154,13 +155,17 @@ export default function Projects() {
 									<a className="nav-link" href="/projects/doj-legal-researcher-agent">Read Case Study</a>
 								)}
 							</div>
-							{(r.topics?.length || r.language) && (
-								<div className="mt-3 flex flex-wrap gap-2 text-xs">
-									{(r.topics && r.topics.length ? r.topics : (r.language ? [r.language] : [])).slice(0, 6).map(t => (
-										<span key={t} className="px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800">{t}</span>
-									))}
-								</div>
-							)}
+							{(() => {
+								const baseTags = (r.topics && r.topics.length ? r.topics : (r.language ? [r.language] : []))
+								const tags = isFeatured ? Array.from(new Set([...baseTags, 'multi-agent', 'FastAPI'])) : baseTags
+								return tags.length ? (
+									<div className="mt-3 flex flex-wrap gap-2 text-xs">
+										{tags.slice(0, 6).map(t => (
+											<span key={t} className="px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800">{t}</span>
+										))}
+									</div>
+								) : null
+							)()}
 					</article>
 					)
 				})}
