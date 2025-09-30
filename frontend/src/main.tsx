@@ -13,6 +13,7 @@ import BlogPost from './routes/BlogPost'
 import NewBlogPost from './routes/NewBlogPost'
 import EditBlogPost from './routes/EditBlogPost'
 
+const basename = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
 const router = createBrowserRouter([
 	{
 		path: '/',
@@ -29,7 +30,7 @@ const router = createBrowserRouter([
 			{ path: 'contact', element: <Contact /> },
 		],
 	},
-], { basename: import.meta.env.BASE_URL })
+], { basename })
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
 	<React.StrictMode>
