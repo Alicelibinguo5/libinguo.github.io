@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createHashRouter, RouterProvider } from 'react-router-dom'
 import './styles.css'
 import RootLayout from './routes/RootLayout'
 import Home from './routes/Home'
@@ -13,8 +13,8 @@ import BlogPost from './routes/BlogPost'
 import NewBlogPost from './routes/NewBlogPost'
 import EditBlogPost from './routes/EditBlogPost'
 
-const basename = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
-const router = createBrowserRouter([
+// Use a hash router to avoid GitHub Pages history API issues
+const router = createHashRouter([
 	{
 		path: '/',
 		element: <RootLayout />,
@@ -30,7 +30,7 @@ const router = createBrowserRouter([
 			{ path: 'contact', element: <Contact /> },
 		],
 	},
-], { basename })
+])
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
 	<React.StrictMode>
