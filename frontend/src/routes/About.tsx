@@ -4,11 +4,11 @@ export default function About() {
 			<h1 className="text-2xl font-semibold">Resume</h1>
 			<p className="text-zinc-600 dark:text-zinc-300">Download or view my latest resume below.</p>
 			<div className="mt-4">
-				<a className="nav-link" href={`${import.meta.env.VITE_API_URL ?? ''}/api/resume`} target="_blank" rel="noreferrer">Download PDF</a>
+				<a className="nav-link" href={`${(import.meta.env.VITE_API_URL as string | undefined) || 'https://libinguo-io.onrender.com'}/api/resume`} target="_blank" rel="noreferrer">Download PDF</a>
 			</div>
 			<div className="mt-4 border rounded-lg overflow-hidden" style={{height: '80vh'}}>
 				<iframe
-					src={`${import.meta.env.VITE_API_URL ?? ''}/api/resume`}
+						src={`${((import.meta.env.VITE_API_URL as string | undefined) || 'https://libinguo-io.onrender.com')}/api/resume`}
 					title="Resume"
 					className="w-full h-full"
 				/>

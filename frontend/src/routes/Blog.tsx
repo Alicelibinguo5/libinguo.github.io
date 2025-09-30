@@ -11,7 +11,7 @@ export default function Blog() {
 		const controller = new AbortController()
 		async function fetchPosts() {
 			try {
-				const base = import.meta.env.VITE_API_URL ?? ''
+				const base = (import.meta.env.VITE_API_URL as string | undefined) || 'https://libinguo-io.onrender.com'
 				const res = await fetch(`${base}/api/blog/`, { signal: controller.signal })
 				if (!res.ok) throw new Error(`Failed: ${res.status}`)
 				const data: BlogPost[] = await res.json()

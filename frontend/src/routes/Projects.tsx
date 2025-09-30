@@ -18,11 +18,11 @@ export default function Projects() {
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 
-	useEffect(() => {
+    useEffect(() => {
 		const controller = new AbortController()
 		async function fetchRepos() {
 			try {
-				const base = import.meta.env.VITE_API_URL ?? ''
+                const base = (import.meta.env.VITE_API_URL as string | undefined) || 'https://libinguo-io.onrender.com'
 				const url = `${base}/api/github/repos?username=Alicelibinguo5&per_page=12`
 				const res = await fetch(url, { signal: controller.signal })
 				if (!res.ok) throw new Error(`Failed: ${res.status}`)

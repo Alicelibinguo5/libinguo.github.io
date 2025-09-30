@@ -42,7 +42,7 @@ export default function EditBlogPost() {
 		setSaving(true)
 		setError(null)
 		try {
-			const base = import.meta.env.VITE_API_URL ?? ''
+			const base = (import.meta.env.VITE_API_URL as string | undefined) || 'https://libinguo-io.onrender.com'
 			const res = await fetch(`${base}/api/blog/${slug}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
