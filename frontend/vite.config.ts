@@ -3,8 +3,8 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig(({ mode }) => ({
 	plugins: [react()],
-	// Update to the GitHub Pages project path after repo rename
-	base: mode === 'production' ? '/portforlio/' : '/',
+	// GitHub Pages project path (update when repo name changes)
+	base: mode === 'production' ? '/portfolio/' : '/',
 }))
 
 
