@@ -95,3 +95,18 @@ def delete_post(slug: str) -> dict:
     return {"ok": True}
 
 
+# --- backup/restore ---
+
+@router.get("/backup", response_model=list[BlogPost])
+def backup_posts() -> list[BlogPost]:
+    return _load_posts()
+
+
+@router.post("/restore", response_model=dict)
+def restore_posts(payload: list[BlogPost]) -> dict:
+    # naive overwrite restore; in real apps add auth/validation
+    posts = [BlogPost(**p.dict() if hasattr(p, 'dict') else p) for p in payload]  # type: ignore[arg-type]
+    _save_posts(posts)
+    return {"ok": True, "count": len(posts)}
+
+

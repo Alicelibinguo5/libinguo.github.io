@@ -1,4 +1,4 @@
-import resumePdf from '../resume.pdf?url'
+import resumePdf from '../@resume.pdf?url'
 
 export default function About() {
 	return (

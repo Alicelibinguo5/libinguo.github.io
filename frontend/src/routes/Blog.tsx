@@ -6,12 +6,12 @@ export default function Blog() {
 	const [posts, setPosts] = useState<BlogPost[]>([])
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
+	const base = (import.meta.env.VITE_API_URL as string | undefined) || 'https://libinguo-io.onrender.com'
 
 	useEffect(() => {
 		const controller = new AbortController()
 		async function fetchPosts() {
 			try {
-				const base = (import.meta.env.VITE_API_URL as string | undefined) || 'https://libinguo-io.onrender.com'
 				const res = await fetch(`${base}/api/blog/`, { signal: controller.signal })
 				if (!res.ok) throw new Error(`Failed: ${res.status}`)
 				const data: BlogPost[] = await res.json()
@@ -35,6 +35,29 @@ export default function Blog() {
 				<Link className="nav-link" to="/blog/new">New Post</Link>
 			</div>
 			<div className="space-y-4">
+				<div className="flex items-center gap-3">
+					<a className="nav-link" href={`${base}/api/blog/backup`} target="_blank" rel="noreferrer">Export JSON</a>
+					<label className="nav-link cursor-pointer">
+						Import JSON
+						<input type="file" accept="application/json" className="hidden" onChange={async (e) => {
+							const file = e.target.files?.[0]
+							if (!file) return
+							try {
+								const text = await file.text()
+								const data = JSON.parse(text)
+								await fetch(`${base}/api/blog/restore`, {
+									method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+								})
+								// reload
+								setLoading(true)
+								const res = await fetch(`${base}/api/blog/`)
+								setPosts(await res.json())
+							} catch (err) {
+								console.error(err)
+							}
+						}} />
+					</label>
+				</div>
 				{posts.map((p) => (
 					<article key={p.slug} className="card">
 						<h2 className="font-semibold text-lg">
