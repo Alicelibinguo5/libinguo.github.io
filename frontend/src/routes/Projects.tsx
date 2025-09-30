@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 type GithubRepo = {
 	id: number
@@ -152,7 +153,7 @@ export default function Projects() {
 							<div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
 								<a className="nav-link" href={r.html_url} target="_blank" rel="noreferrer">GitHub</a>
 								{isFeatured && (
-									<a className="nav-link" href="/projects/doj-legal-researcher-agent">Read Case Study</a>
+									<Link className="nav-link" to="/projects/doj-legal-researcher-agent">Read Case Study</Link>
 								)}
 							</div>
 							{tags.length > 0 && (
