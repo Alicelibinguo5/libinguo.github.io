@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
@@ -9,9 +10,33 @@ router = APIRouter()
 
 
 def _get_resume_path() -> Path:
-	# Project root is three levels up from this file: backend/app/routers -> project root
-	project_root = Path(__file__).resolve().parents[3]
-	return project_root / "Libin_Guo_Data_Resume.docx.pdf"
+    """Resolve resume path with env override and multiple fallbacks.
+
+    Priority:
+    1) RESUME_FILE env (absolute or relative to project root)
+    2) Project root + default filename
+    3) Backend root + default filename
+    """
+    default_name = "resume.pdf"
+    # Paths
+    routers_dir = Path(__file__).resolve().parent
+    app_dir = routers_dir.parent
+    backend_root = app_dir.parent
+    project_root = backend_root.parent
+
+    env_value = os.getenv("RESUME_FILE")
+    candidates: list[Path] = []
+    if env_value:
+        p = Path(env_value)
+        candidates.append(p if p.is_absolute() else (project_root / p))
+    candidates.append(project_root / default_name)
+    candidates.append(backend_root / default_name)
+
+    for c in candidates:
+        if c.exists():
+            return c
+    # Fallback to a non-existing path under project root to keep type stable
+    return candidates[0] if candidates else (project_root / default_name)
 
 
 @router.get("/", response_class=FileResponse)

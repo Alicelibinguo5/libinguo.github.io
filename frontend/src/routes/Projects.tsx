@@ -51,6 +51,7 @@ export default function Projects() {
 
 	// Make A/B Test Analysis the #3 project with a concise goal
 	const THIRD_FULL_NAME = 'Alicelibinguo/Analyzing-Website-Landing-Page-A-B-Test-Results-'
+	const THIRD_REPO_NAME = 'Analyzing-Website-Landing-Page-A-B-Test-Results-'
 	const THIRD_GOAL = 'A/B testing analysis to assess if a new landing page increases conversion, using pandas, matplotlib, and regression.'
 
 	// Only show repos that have at least one GitHub star
@@ -99,7 +100,7 @@ export default function Projects() {
 	}
 
 	// Ensure A/B Test project appears as the third project
-	const thirdIndex = displayRepos.findIndex(r => r.full_name === THIRD_FULL_NAME)
+	const thirdIndex = displayRepos.findIndex(r => r.full_name === THIRD_FULL_NAME || r.name === THIRD_REPO_NAME)
 	if (thirdIndex >= 0) {
 		const [third] = displayRepos.splice(thirdIndex, 1)
 		const insertPos3 = Math.min(2, displayRepos.length)
@@ -108,7 +109,7 @@ export default function Projects() {
 		const insertPos3 = Math.min(2, displayRepos.length)
 		displayRepos.splice(insertPos3, 0, {
 			id: -3,
-			name: 'Analyzing-Website-Landing-Page-A-B-Test-Results-',
+			name: THIRD_REPO_NAME,
 			full_name: THIRD_FULL_NAME,
 			html_url: 'https://github.com/Alicelibinguo/Analyzing-Website-Landing-Page-A-B-Test-Results-',
 			description: THIRD_GOAL,
@@ -118,6 +119,14 @@ export default function Projects() {
 			topics: ['pandas', 'matplotlib', 'statsmodels', 'sklearn']
 		})
 	}
+
+	// Deduplicate by repository name to avoid showing forks and the pinned card together
+	const seenNames = new Set<string>()
+	displayRepos = displayRepos.filter(r => {
+		if (seenNames.has(r.name)) return false
+		seenNames.add(r.name)
+		return true
+	})
 
 	// Limit to a maximum of 8 projects
 	displayRepos = displayRepos.slice(0, 8)
