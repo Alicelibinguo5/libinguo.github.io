@@ -39,8 +39,21 @@ export default function BlogPost() {
 			<div className="prose dark:prose-invert max-w-none whitespace-pre-wrap">
 				{post.content}
 			</div>
-			<div className="mt-4">
+			<div className="mt-4 flex items-center gap-4">
 				<Link className="nav-link" to={`/blog/${post.slug}/edit`}>Edit</Link>
+				<button
+					className="text-sm text-red-600 hover:underline"
+					onClick={async () => {
+						if (!confirm('Delete this post? This cannot be undone.')) return
+						const base = (import.meta.env.VITE_API_URL as string | undefined) || 'https://libinguo-io.onrender.com'
+						const res = await fetch(`${base}/api/blog/${post.slug}`, { method: 'DELETE' })
+						if (res.ok) {
+							window.location.href = '/#/blog'
+						}
+					}}
+				>
+					Delete
+				</button>
 			</div>
 		</article>
 	)
