@@ -5,9 +5,8 @@ from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import MetaData, Table, Column, String, Text, Boolean, TIMESTAMP, text, select, func
+from sqlalchemy import MetaData, Table, Column, String, Text, Boolean, TIMESTAMP, text, select, func, create_engine
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 
 from ..models import BlogPost, BlogPostCreate, BlogPostUpdate
 
@@ -16,22 +15,22 @@ router = APIRouter()
 
 
 class Db:
-    engine: Optional[AsyncEngine] = None
+    engine = None
     table: Optional[Table] = None
 
 
-def _get_engine() -> AsyncEngine:
+def _get_engine():
     if Db.engine is None:
         import os
         dsn = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")
         if not dsn:
             raise RuntimeError("DATABASE_URL not configured")
-        # Render provides DATABASE_URL; use asyncpg scheme
+        # Use psycopg (binary) driver
         if dsn.startswith("postgres://"):
-            dsn = dsn.replace("postgres://", "postgresql+asyncpg://", 1)
+            dsn = dsn.replace("postgres://", "postgresql+psycopg://", 1)
         elif dsn.startswith("postgresql://"):
-            dsn = dsn.replace("postgresql://", "postgresql+asyncpg://", 1)
-        Db.engine = create_async_engine(dsn, pool_pre_ping=True)
+            dsn = dsn.replace("postgresql://", "postgresql+psycopg://", 1)
+        Db.engine = create_engine(dsn, pool_pre_ping=True, future=True)
     return Db.engine
 
 
@@ -54,17 +53,20 @@ def _get_table() -> Table:
 
 
 @router.on_event("startup")
-async def init_table() -> None:
+def init_table() -> None:
     import os
-    engine = _get_engine()
+    try:
+        engine = _get_engine()
+    except RuntimeError:
+        # Skip when DATABASE_URL is not configured; other routers can still work
+        return
     table = _get_table()
-    async with engine.begin() as conn:
-        await conn.run_sync(table.metadata.create_all)
-        # Optional seed once when table is empty
+    with engine.begin() as conn:
+        table.metadata.create_all(conn)
         if (os.getenv("SEED_BLOG", "false").lower() in {"1", "true", "yes"}):
-            count = (await conn.execute(select(func.count()).select_from(table))).scalar_one()
+            count = conn.execute(select(func.count()).select_from(table)).scalar_one()
             if count == 0:
-                await conn.execute(table.insert().values([
+                conn.execute(table.insert().values([
                     {
                         "slug": "hello-world",
                         "title": "Hello, world",
@@ -88,49 +90,49 @@ def _slugify(title: str) -> str:
 
 
 @router.get("/", response_model=List[BlogPost])
-async def list_posts() -> List[BlogPost]:
+def list_posts() -> List[BlogPost]:
     engine = _get_engine()
     table = _get_table()
-    async with engine.connect() as conn:
-        rows = (await conn.execute(table.select().order_by(table.c.created_at.desc()))).mappings().all()
+    with engine.connect() as conn:
+        rows = conn.execute(table.select().order_by(table.c.created_at.desc())).mappings().all()
         return [BlogPost(**{**row, "created_at": row["created_at"].isoformat() if row["created_at"] else ""}) for row in rows]
 
 
 @router.get("/{slug}", response_model=BlogPost)
-async def get_post(slug: str) -> BlogPost:
+def get_post(slug: str) -> BlogPost:
     engine = _get_engine()
     table = _get_table()
-    async with engine.connect() as conn:
-        row = (await conn.execute(table.select().where(table.c.slug == slug))).mappings().first()
+    with engine.connect() as conn:
+        row = conn.execute(table.select().where(table.c.slug == slug)).mappings().first()
         if not row:
             raise HTTPException(status_code=404, detail="Post not found")
         return BlogPost(**{**row, "created_at": row["created_at"].isoformat() if row["created_at"] else ""})
 
 
 @router.post("/", response_model=BlogPost)
-async def create_post(payload: BlogPostCreate) -> BlogPost:
+def create_post(payload: BlogPostCreate) -> BlogPost:
     engine = _get_engine()
     table = _get_table()
     slug = _slugify(payload.title)
-    async with engine.begin() as conn:
-        exists = (await conn.execute(table.select().where(table.c.slug == slug))).first()
+    with engine.begin() as conn:
+        exists = conn.execute(table.select().where(table.c.slug == slug)).first()
         if exists:
             raise HTTPException(status_code=400, detail="Slug already exists")
-        await conn.execute(table.insert().values(
+        conn.execute(table.insert().values(
             slug=slug,
             title=payload.title,
             summary=payload.summary,
             content=payload.content,
         ))
-    return await get_post(slug)
+    return get_post(slug)
 
 
 @router.put("/{slug}", response_model=BlogPost)
-async def update_post(slug: str, payload: BlogPostUpdate) -> BlogPost:
+def update_post(slug: str, payload: BlogPostUpdate) -> BlogPost:
     engine = _get_engine()
     table = _get_table()
-    async with engine.begin() as conn:
-        row = (await conn.execute(table.select().where(table.c.slug == slug))).first()
+    with engine.begin() as conn:
+        row = conn.execute(table.select().where(table.c.slug == slug)).first()
         if not row:
             raise HTTPException(status_code=404, detail="Post not found")
         update_values = {}
@@ -141,24 +143,24 @@ async def update_post(slug: str, payload: BlogPostUpdate) -> BlogPost:
         if payload.content is not None:
             update_values["content"] = payload.content
         if update_values:
-            await conn.execute(table.update().where(table.c.slug == slug).values(**update_values))
-    return await get_post(slug)
+            conn.execute(table.update().where(table.c.slug == slug).values(**update_values))
+    return get_post(slug)
 
 
 @router.delete("/{slug}", response_model=dict)
-async def delete_post(slug: str) -> dict:
+def delete_post(slug: str) -> dict:
     engine = _get_engine()
     table = _get_table()
-    async with engine.begin() as conn:
-        result = await conn.execute(table.delete().where(table.c.slug == slug))
-        if result.rowcount == 0:  # type: ignore[attr-defined]
+    with engine.begin() as conn:
+        result = conn.execute(table.delete().where(table.c.slug == slug))
+        if getattr(result, 'rowcount', 0) == 0:
             raise HTTPException(status_code=404, detail="Post not found")
     return {"ok": True}
 
 
 @router.get("/backup", response_model=list[BlogPost])
-async def backup_posts() -> list[BlogPost]:
-    return await list_posts()
+def backup_posts() -> list[BlogPost]:
+    return list_posts()
 
 
 class RestoreItem(BaseModel):
@@ -170,13 +172,13 @@ class RestoreItem(BaseModel):
 
 
 @router.post("/restore", response_model=dict)
-async def restore_posts(payload: list[RestoreItem]) -> dict:
+def restore_posts(payload: list[RestoreItem]) -> dict:
     engine = _get_engine()
     table = _get_table()
-    async with engine.begin() as conn:
-        await conn.execute(table.delete())
+    with engine.begin() as conn:
+        conn.execute(table.delete())
         for p in payload:
-            await conn.execute(table.insert().values(
+            conn.execute(table.insert().values(
                 slug=p.slug,
                 title=p.title,
                 summary=p.summary,
