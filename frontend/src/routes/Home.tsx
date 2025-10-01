@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 export default function Home() {
 	return (
 		<section className="space-y-6">
@@ -23,7 +25,7 @@ export default function Home() {
 							<h2 className="font-semibold mb-2">Get in touch</h2>
 							<p className="text-sm text-zinc-600 dark:text-zinc-400">Use the Contact page to send a message.</p>
 							<div className="mt-2">
-								<a className="nav-link" href="/contact">Contact</a>
+								<Link className="nav-link" to="/contact">Contact</Link>
 							</div>
 						</div>
 					</div>

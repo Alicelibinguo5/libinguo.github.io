@@ -1,34 +1,83 @@
 from __future__ import annotations
 
-import json
-import os
 from datetime import datetime
-from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from sqlalchemy import MetaData, Table, Column, String, Text, Boolean, TIMESTAMP, text, select, func
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 
 from ..models import BlogPost, BlogPostCreate, BlogPostUpdate
 
 
 router = APIRouter()
 
-DATA_DIR = Path(os.getenv("BLOG_DATA_DIR", str(Path(__file__).resolve().parents[2] / "data")))
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-POSTS_FILE = DATA_DIR / "blog_posts.json"
+
+class Db:
+    engine: Optional[AsyncEngine] = None
+    table: Optional[Table] = None
 
 
-def _load_posts() -> List[BlogPost]:
-    if not POSTS_FILE.exists():
-        return []
-    with POSTS_FILE.open("r", encoding="utf-8") as f:
-        data = json.load(f)
-    return [BlogPost(**p) for p in data]
+def _get_engine() -> AsyncEngine:
+    if Db.engine is None:
+        import os
+        dsn = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")
+        if not dsn:
+            raise RuntimeError("DATABASE_URL not configured")
+        # Render provides DATABASE_URL; use asyncpg scheme
+        if dsn.startswith("postgres://"):
+            dsn = dsn.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif dsn.startswith("postgresql://"):
+            dsn = dsn.replace("postgresql://", "postgresql+asyncpg://", 1)
+        Db.engine = create_async_engine(dsn, pool_pre_ping=True)
+    return Db.engine
 
 
-def _save_posts(posts: List[BlogPost]) -> None:
-    with POSTS_FILE.open("w", encoding="utf-8") as f:
-        json.dump([p.dict() for p in posts], f, ensure_ascii=False, indent=2)
+def _get_table() -> Table:
+    if Db.table is None:
+        metadata = MetaData()
+        Db.table = Table(
+            "blog_posts",
+            metadata,
+            Column("slug", String(200), primary_key=True),
+            Column("title", String(300), nullable=False),
+            Column("summary", String(1000), nullable=False),
+            Column("content", Text, nullable=False),
+            Column("tags", JSONB, nullable=True),
+            Column("published", Boolean, server_default=text("true")),
+            Column("created_at", TIMESTAMP(timezone=True), server_default=text("now()")),
+            Column("updated_at", TIMESTAMP(timezone=True), server_default=text("now()"), onupdate=text("now()")),
+        )
+    return Db.table
+
+
+@router.on_event("startup")
+async def init_table() -> None:
+    import os
+    engine = _get_engine()
+    table = _get_table()
+    async with engine.begin() as conn:
+        await conn.run_sync(table.metadata.create_all)
+        # Optional seed once when table is empty
+        if (os.getenv("SEED_BLOG", "false").lower() in {"1", "true", "yes"}):
+            count = (await conn.execute(select(func.count()).select_from(table))).scalar_one()
+            if count == 0:
+                await conn.execute(table.insert().values([
+                    {
+                        "slug": "hello-world",
+                        "title": "Hello, world",
+                        "summary": "Welcome to my blog — first post seeded for demo.",
+                        "content": "This is a sample post created during initial seeding.",
+                    },
+                    {
+                        "slug": "real-time-ads-metrics-pipeline",
+                        "title": "A Minimal Real‑Time Ads Metrics Pipeline",
+                        "summary": "Kafka → Flink → Iceberg → Superset: pragmatic baseline.",
+                        "content": "Notes on design trade‑offs, checkpoints, and dashboarding.",
+                    },
+                ]))
 
 
 def _slugify(title: str) -> str:
@@ -39,74 +88,100 @@ def _slugify(title: str) -> str:
 
 
 @router.get("/", response_model=List[BlogPost])
-def list_posts() -> List[BlogPost]:
-    return _load_posts()
+async def list_posts() -> List[BlogPost]:
+    engine = _get_engine()
+    table = _get_table()
+    async with engine.connect() as conn:
+        rows = (await conn.execute(table.select().order_by(table.c.created_at.desc()))).mappings().all()
+        return [BlogPost(**{**row, "created_at": row["created_at"].isoformat() if row["created_at"] else ""}) for row in rows]
 
 
 @router.get("/{slug}", response_model=BlogPost)
-def get_post(slug: str) -> BlogPost:
-    for p in _load_posts():
-        if p.slug == slug:
-            return p
-    raise HTTPException(status_code=404, detail="Post not found")
+async def get_post(slug: str) -> BlogPost:
+    engine = _get_engine()
+    table = _get_table()
+    async with engine.connect() as conn:
+        row = (await conn.execute(table.select().where(table.c.slug == slug))).mappings().first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Post not found")
+        return BlogPost(**{**row, "created_at": row["created_at"].isoformat() if row["created_at"] else ""})
 
 
 @router.post("/", response_model=BlogPost)
-def create_post(payload: BlogPostCreate) -> BlogPost:
-    posts = _load_posts()
+async def create_post(payload: BlogPostCreate) -> BlogPost:
+    engine = _get_engine()
+    table = _get_table()
     slug = _slugify(payload.title)
-    if any(p.slug == slug for p in posts):
-        raise HTTPException(status_code=400, detail="Slug already exists")
-    post = BlogPost(
-        slug=slug,
-        title=payload.title,
-        summary=payload.summary,
-        content=payload.content,
-        created_at=datetime.utcnow().isoformat() + "Z",
-    )
-    posts.insert(0, post)
-    _save_posts(posts)
-    return post
+    async with engine.begin() as conn:
+        exists = (await conn.execute(table.select().where(table.c.slug == slug))).first()
+        if exists:
+            raise HTTPException(status_code=400, detail="Slug already exists")
+        await conn.execute(table.insert().values(
+            slug=slug,
+            title=payload.title,
+            summary=payload.summary,
+            content=payload.content,
+        ))
+    return await get_post(slug)
 
 
 @router.put("/{slug}", response_model=BlogPost)
-def update_post(slug: str, payload: BlogPostUpdate) -> BlogPost:
-    posts = _load_posts()
-    for i, p in enumerate(posts):
-        if p.slug == slug:
-            updated = p.copy(update={
-                "title": payload.title if payload.title is not None else p.title,
-                "summary": payload.summary if payload.summary is not None else p.summary,
-                "content": payload.content if payload.content is not None else p.content,
-            })
-            posts[i] = updated
-            _save_posts(posts)
-            return updated
-    raise HTTPException(status_code=404, detail="Post not found")
+async def update_post(slug: str, payload: BlogPostUpdate) -> BlogPost:
+    engine = _get_engine()
+    table = _get_table()
+    async with engine.begin() as conn:
+        row = (await conn.execute(table.select().where(table.c.slug == slug))).first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Post not found")
+        update_values = {}
+        if payload.title is not None:
+            update_values["title"] = payload.title
+        if payload.summary is not None:
+            update_values["summary"] = payload.summary
+        if payload.content is not None:
+            update_values["content"] = payload.content
+        if update_values:
+            await conn.execute(table.update().where(table.c.slug == slug).values(**update_values))
+    return await get_post(slug)
 
 
 @router.delete("/{slug}", response_model=dict)
-def delete_post(slug: str) -> dict:
-    posts = _load_posts()
-    new_posts = [p for p in posts if p.slug != slug]
-    if len(new_posts) == len(posts):
-        raise HTTPException(status_code=404, detail="Post not found")
-    _save_posts(new_posts)
+async def delete_post(slug: str) -> dict:
+    engine = _get_engine()
+    table = _get_table()
+    async with engine.begin() as conn:
+        result = await conn.execute(table.delete().where(table.c.slug == slug))
+        if result.rowcount == 0:  # type: ignore[attr-defined]
+            raise HTTPException(status_code=404, detail="Post not found")
     return {"ok": True}
 
 
-# --- backup/restore ---
-
 @router.get("/backup", response_model=list[BlogPost])
-def backup_posts() -> list[BlogPost]:
-    return _load_posts()
+async def backup_posts() -> list[BlogPost]:
+    return await list_posts()
+
+
+class RestoreItem(BaseModel):
+    slug: str
+    title: str
+    summary: str
+    content: str
+    created_at: Optional[str] = None
 
 
 @router.post("/restore", response_model=dict)
-def restore_posts(payload: list[BlogPost]) -> dict:
-    # naive overwrite restore; in real apps add auth/validation
-    posts = [BlogPost(**p.dict() if hasattr(p, 'dict') else p) for p in payload]  # type: ignore[arg-type]
-    _save_posts(posts)
-    return {"ok": True, "count": len(posts)}
+async def restore_posts(payload: list[RestoreItem]) -> dict:
+    engine = _get_engine()
+    table = _get_table()
+    async with engine.begin() as conn:
+        await conn.execute(table.delete())
+        for p in payload:
+            await conn.execute(table.insert().values(
+                slug=p.slug,
+                title=p.title,
+                summary=p.summary,
+                content=p.content,
+            ))
+    return {"ok": True, "count": len(payload)}
 
 

@@ -6,3 +6,6 @@ aiofiles==24.1.0
 email-validator==2.2.0
 pdfminer.six==20221105
 httpx==0.27.0
+SQLAlchemy==2.0.35
+asyncpg==0.29.0
+greenlet==3.0.3
